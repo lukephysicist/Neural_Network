@@ -2,28 +2,46 @@ import numpy as np
 
 class DenseLayer:
     
-    def __init__(self, n_inputs, n_neurons, activation):
+    def __init__(self, n_inputs, n_neurons, activation_func):
         self.weights = .1 * np.random.randn(n_inputs, n_neurons)
         self.biases = np.zeros((1, n_neurons))
-        self.activation = activation
+        self.activation_func = activation_func
+
     
     def forward(self, inputs):
-        matrix_calc = np.dot(inputs, self.weights) + self.biases
-        return activation_func(matrix_calc, self.activation)
+        self.z = np.dot(inputs, self.weights) + self.biases
+        self.a = self.activation_func(self.z)
+        return self.a
+    
+    def back(self, inputs, truths, rate):
+        inputs * act_prime(self.activation_func(self.z)) * 2(self.a - truths) 
+        
+
         
 
 
-def activation_func(inputs, func_type):
-    if func_type == "relu":
-        return np.maximum(0, inputs)
+def relu(inputs):
+    return np.maximum(0, inputs)
     
-    elif func_type == 'sigmoid':
-        sigmoid = lambda x: 1 / (1 + np.exp(x))
+def sigmoid(inputs):
+        sigmoid = lambda x: 1 / (1 + np.exp(-x))
         return sigmoid(inputs)
+
+def act_prime(func):
+    if func == sigmoid:
+        return sigmoid_prime
+    elif func == relu:
+        return relu_prime
+
+def softmax(inputs):
+    exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+    return exp_values / np.sum(exp_values, axis=1, keepdims=True)
     
-    elif func_type == 'softmax':
-        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
-        return exp_values / np.sum(exp_values, axis=1, keepdims=True)
+def relu_prime(x):
+    return np.where(x > 0, 1, 0)
+
+def sigmoid_prime(x):
+    return np.exp(-x)/((1 + np.exp(-x))**2)
 
 
 def cat_cross_entropy(inputs, truths):
@@ -38,3 +56,10 @@ def cat_cross_entropy(inputs, truths):
     logged_true_estimates = -np.log(true_estimates)
 
     return np.mean(logged_true_estimates)
+
+def mean_sq_error(inputs, truths): # truths needs to be a two dimensional list of the correct activations for every sample
+
+    error_matrix = np.square(inputs - truths)
+    sum_vector = np.sum(error_matrix, axis = 1)
+
+    return np.mean(sum_vector)
