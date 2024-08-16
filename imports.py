@@ -14,6 +14,8 @@ class DenseLayer:
         return self.a
     
     def back(self, inputs, truths, rate):
+
+        # assumes loss is MSE:
         weight_deltas = np.dot(inputs.T, act_prime(self.activation_func, self.z) * 2*(self.a - truths))
         self.weights -= (weight_deltas * rate) 
 
