@@ -14,8 +14,11 @@ class DenseLayer:
         return self.a
     
     def back(self, inputs, truths, rate):
-        inputs * act_prime(self.activation_func(self.z)) * 2(self.a - truths) 
-        
+        weight_deltas = np.dot(inputs.T, act_prime(self.activation_func, self.z) * 2*(self.a - truths))
+        self.weights -= (weight_deltas * rate) 
+
+        bias_deltas = np.mean(act_prime(self.activation_func, self.z) * 2 * (self.a - truths), axis = 0)
+        self.biases -= bias_deltas * rate
 
         
 
@@ -27,11 +30,11 @@ def sigmoid(inputs):
         sigmoid = lambda x: 1 / (1 + np.exp(-x))
         return sigmoid(inputs)
 
-def act_prime(func):
+def act_prime(func, x):
     if func == sigmoid:
-        return sigmoid_prime
+        return sigmoid_prime(x)
     elif func == relu:
-        return relu_prime
+        return relu_prime(x)
 
 def softmax(inputs):
     exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
