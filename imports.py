@@ -16,13 +16,45 @@ class DenseLayer:
     def back(self, inputs, truths, rate):
 
         # assumes loss is MSE:
-        weight_deltas = np.dot(inputs.T, act_prime(self.activation_func, self.z) * 2*(self.a - truths))
+        e_wise_product = act_prime(self.activation_func, self.z) * 2 * (self.a - truths)
+
+        weight_deltas = np.dot(inputs.T, e_wise_product) / inputs.shape[0]
         self.weights -= (weight_deltas * rate) 
 
         bias_deltas = np.mean(act_prime(self.activation_func, self.z) * 2 * (self.a - truths), axis = 0)
         self.biases -= bias_deltas * rate
 
-        
+
+
+class Network:
+    
+    def __init__(self, layers):
+        try:
+            assert all(isinstance(layer, DenseLayer) for layer in layers)
+        except Exception as e:
+            print("must initialize Network with list of Layer objects")
+
+        try:
+            for i in range(len(layers) - 1):
+                assert layers[i].weights.shape[1] == layers[i+1].weights.shape[0]
+        except:
+            print("number of inputs for one layer must be the same as the number of neurons for previous layer")
+
+        self.layers = [layer for layer in layers]
+
+
+    def network_forward(self, network_inputs):
+        try:
+            assert network_inputs.shape[1] == self.layers[0].shape[0]
+        except:
+            print(f"network has {self.layers[0].shape[0]} dimensional inputs, you gave {network_inputs.shape[1]}")
+
+        layer_inputs = network_inputs
+        for layer in self.layers:
+            layer_inputs = layer.forward(layer_inputs)
+
+        return layer_inputs
+
 
 
 def relu(inputs):
