@@ -19,22 +19,42 @@ class DenseLayer:
         self.a = self.activation_func(self.z)
         return self.a
     
-    def back(self, inputs, truths, rate):
+    def back(self, inputs, truths, rate, next_layer = None):
+        
 
         # assumes loss is MSE:
-        e_wise_product = act_prime(self.activation_func, self.z) * 2 * (self.a - truths)
+        
+            
+        
 
-        weight_deltas = np.dot(inputs.T, e_wise_product) / inputs.shape[0]
-        self.weights -= (weight_deltas * rate) 
+            
+
+        delZ_delW = inputs.T
+        delA_delZ = act_prime(self.activation_func, self.z)
+
+        delC_delW = np.dot(delZ_delW, delA_delZ * self.delC_delA(next_layer, truths) ) #<--- may need transform here
+
+        self.weights -= (delC_delW * rate) 
 
         bias_deltas = np.mean(act_prime(self.activation_func, self.z) * 2 * (self.a - truths), axis = 0)
         self.biases -= bias_deltas * rate
+
+    def delC_delA(self, next_layer, truths):
+        if next_layer == None:
+            return 2 * (self.a - truths)
+        
+        next_delC_delA = next_layer.delC_delA() ##think
+        next_delA_delZ = act_prime(next_layer.activation_func, next_layer.z)
+        next_delZ_delA = next_layer.weights.T
+
+        return np.dot(next_delC_delA, next_delA_delZ * next_delZ_delA)
+        
 
 
 
 class Network:
     
-    def __init__(self, layers, loss_func = 'mse'):
+    def __init__(self, layers, loss_func = 'mse', rate = .01):
         if not all(isinstance(layer, DenseLayer) for layer in layers):
             raise NetworkErrorOne("""must initialize Network with list of Layer objects.""")
         
@@ -68,7 +88,14 @@ class Network:
 
         return self.out
 
-
+    def network_back(self, inputs, truths, rate):
+        for index, layer in reversed(self.layers):
+            if index == 0:
+                layer.back(inputs, truths, rate)
+            else:
+                layer.back(inputs, truths, rate, next_layer = reversed(self.layers)[index-1])
+        
+    
 
 class NetworkErrorOne(Exception):
     """For if the network object is not passed a list"""
