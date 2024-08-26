@@ -5,49 +5,56 @@ class DenseLayer:
     def __init__(self, n_inputs, n_neurons, activation_func):
         self.weights = .1 * np.random.randn(n_inputs, n_neurons)
         self.biases = np.zeros((1, n_neurons))
+        self.next_layer = None
 
         if activation_func == 'sigmoid':
             self.activation_func = sigmoid
 
         elif activation_func == 'softmax':
             self.activation_func = softmax
+        
+        elif activation_func == 'relu':
+            self.activation_func = relu
 
-        else: self.activation_func = relu
+        else: self.activation_func = linear
     
     def forward(self, inputs):
-        self.z = np.dot(inputs, self.weights) + self.biases
+        self.a_prev = inputs
+        self.z = np.dot(self.a_prev, self.weights) + self.biases
         self.a = self.activation_func(self.z)
         return self.a
     
-    def back(self, inputs, truths, rate, next_layer = None):
-        
+    def back(self, truths, rate, loss_func):
+        if loss_func == mean_sq_error:
+            # change in cost w.r.t. activation in the current layer
+            self.delC_delA = self.calc_delC_delA(self.next_layer, truths)
 
-        # assumes loss is MSE:
-        
-            
-        
+            # change in activation w.r.t. weighted sum in current layer
+            self.delA_delZ = act_prime(self.activation_func, self.z)
 
-            
+            # change in weighted sum w.r.t. inputs to the current layer
+            self.delZ_delW = self.a_prev.T
 
-        delZ_delW = inputs.T
-        delA_delZ = act_prime(self.activation_func, self.z)
+            # change in cost w.r.t. weights in the current layer
+            delC_delW = np.dot(self.delZ_delW, self.delA_delZ * self.delC_delA) / self.a.shape[0]
 
-        delC_delW = np.dot(delZ_delW, delA_delZ * self.delC_delA(next_layer, truths) ) #<--- may need transform here
+            self.weights -= (delC_delW * rate) 
 
-        self.weights -= (delC_delW * rate) 
 
-        bias_deltas = np.mean(act_prime(self.activation_func, self.z) * 2 * (self.a - truths), axis = 0)
-        self.biases -= bias_deltas * rate
+            # change in cost w.r.t. biases in the current layer
+            delC_delB = np.mean(self.delC_delA * self.delA_delZ, axis = 0)
 
-    def delC_delA(self, next_layer, truths):
-        if next_layer == None:
+            self.biases -= delC_delB
+
+    def calc_delC_delA(self, truths):
+        if self.next_layer == None:
             return 2 * (self.a - truths)
         
-        next_delC_delA = next_layer.delC_delA() ##think
-        next_delA_delZ = act_prime(next_layer.activation_func, next_layer.z)
-        next_delZ_delA = next_layer.weights.T
+        next_delC_delA = self.next_layer.delC_delA
+        next_delA_delZ = self.next_layer.delA_delZ
+        next_delZ_delA_prev = self.next_layer.weights.T
 
-        return np.dot(next_delC_delA, next_delA_delZ * next_delZ_delA)
+        return np.dot(next_delC_delA * next_delA_delZ, next_delZ_delA_prev)
         
 
 
@@ -62,8 +69,13 @@ class Network:
         for i in range(len(layers) - 1):
             if layers[i].weights.shape[1] != layers[i+1].weights.shape[0]:
                 raise NetworkErrorTwo("Each layer must have n_inputs equal to n_neurons in previous layer")
-                
+            else:
+                layers[i].next_layer = layers[i+1]
+
+        layers[-1].next_layer = None
         self.layers = layers
+        self.rate = rate
+        self.loss = None
 
         if loss_func == 'cat_cross_entropy':
             self.loss_func = cat_cross_entropy
@@ -72,10 +84,10 @@ class Network:
 
 
     def network_forward(self, network_inputs, truths = np.array([])):
-        if network_inputs.shape[0] != self.layers[0].weights.shape[0]:
+        if network_inputs.shape[1] != self.layers[0].weights.shape[0]:
             raise NetworkErrorThree(f'''
                 the network has {self.layers[0].weights.shape[0]} dimensional inputs.
-                You gave a{network_inputs.shape[0]} dimensional input''')
+                You gave a {network_inputs.shape[1]} dimensional input''')
 
         layer_inputs = network_inputs
         for layer in self.layers:
@@ -88,12 +100,9 @@ class Network:
 
         return self.out
 
-    def network_back(self, inputs, truths, rate):
-        for index, layer in reversed(self.layers):
-            if index == 0:
-                layer.back(inputs, truths, rate)
-            else:
-                layer.back(inputs, truths, rate, next_layer = reversed(self.layers)[index-1])
+    def network_back(self, truths):
+        for layer in reversed(self.layers):
+            layer.back(truths, self.rate, self.loss_func)
         
     
 
@@ -116,16 +125,22 @@ def sigmoid(inputs):
         sigmoid = lambda x: 1 / (1 + np.exp(-x))
         return sigmoid(inputs)
 
+def softmax(inputs):
+    exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+    return exp_values / np.sum(exp_values, axis=1, keepdims=True)
+    
+def linear(x):
+    return x
+
 def act_prime(func, x):
     if func == sigmoid:
         return sigmoid_prime(x)
     elif func == relu:
         return relu_prime(x)
-
-def softmax(inputs):
-    exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
-    return exp_values / np.sum(exp_values, axis=1, keepdims=True)
+    elif func == linear:
+        return np.ones(x.shape)
     
+
 def relu_prime(x):
     return np.where(x > 0, 1, 0)
 
