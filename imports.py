@@ -3,9 +3,6 @@ import numpy as np
 class DenseLayer:
     
     def __init__(self, n_inputs, n_neurons, activation_func):
-        self.weights = .1 * np.random.randn(n_inputs, n_neurons)
-        self.biases = np.zeros((1, n_neurons))
-        self.next_layer = None
 
         if activation_func == 'sigmoid':
             self.activation_func = sigmoid
@@ -17,6 +14,15 @@ class DenseLayer:
             self.activation_func = relu
 
         else: self.activation_func = linear
+
+        if self.activation_func == relu:
+            self.weights = np.sqrt(2/n_inputs) * np.random.randn(n_inputs, n_neurons)
+        else:
+            self.weights = np.sqrt(1/n_inputs) * np.random.randn(n_inputs, n_neurons)
+
+        self.biases = np.zeros((1, n_neurons))
+        self.next_layer = None
+
     
     def forward(self, inputs):
         self.a_prev = inputs
@@ -27,7 +33,7 @@ class DenseLayer:
     def back(self, truths, rate, loss_func):
         if loss_func == mean_sq_error:
             # change in cost w.r.t. activation in the current layer
-            self.delC_delA = self.calc_delC_delA(self.next_layer, truths)
+            self.delC_delA = self.calc_delC_delA(truths)
 
             # change in activation w.r.t. weighted sum in current layer
             self.delA_delZ = act_prime(self.activation_func, self.z)
@@ -103,6 +109,28 @@ class Network:
     def network_back(self, truths):
         for layer in reversed(self.layers):
             layer.back(truths, self.rate, self.loss_func)
+
+    def train_test(self, training_samples, testing_samples, batch_size):
+        
+        # batches the training samples
+        training_set = [dict(list(training_samples.items())[i: i+batch_size]) for i in range(0, len(training_samples.items()), batch_size)]
+
+        # creates a list of input batches and their answers
+        network_inputs = [np.array(list(batch.keys())) for batch in training_set]
+        network_truths = [np.array(list(batch.values())) for batch in training_set]
+        
+        # trains the network on each batch in the traning set
+        loss_ys = []
+        for i in range(len(network_inputs)):
+            self.network_forward(network_inputs=network_inputs[i], truths=network_truths)
+            loss_ys.append(self.loss)
+            self.network_back(network_truths)
+
+        # forward pass with the training set, calculating accuracy, printing loss graph over time
+
+
+            
+
         
     
 
