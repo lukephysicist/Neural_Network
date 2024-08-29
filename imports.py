@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class DenseLayer:
     
@@ -67,7 +68,7 @@ class DenseLayer:
 
 class Network:
     
-    def __init__(self, layers, loss_func = 'mse', rate = .01):
+    def __init__(self, layers, loss_func = 'mse', rate = .01, regressor = True):
         if not all(isinstance(layer, DenseLayer) for layer in layers):
             raise NetworkErrorOne("""must initialize Network with list of Layer objects.""")
         
@@ -82,6 +83,7 @@ class Network:
         self.layers = layers
         self.rate = rate
         self.loss = None
+        self.regressor = regressor
 
         if loss_func == 'cat_cross_entropy':
             self.loss_func = cat_cross_entropy
@@ -115,7 +117,7 @@ class Network:
         # batches the training samples
         training_set = [dict(list(training_samples.items())[i: i+batch_size]) for i in range(0, len(training_samples.items()), batch_size)]
 
-        # creates a list of input batches and their answers
+        # creates a list of traning input batches and their answers
         network_inputs = [np.array(list(batch.keys())) for batch in training_set]
         network_truths = [np.array(list(batch.values())) for batch in training_set]
         
@@ -126,12 +128,24 @@ class Network:
             loss_ys.append(self.loss)
             self.network_back(network_truths)
 
-        # forward pass with the training set, calculating accuracy, printing loss graph over time
+        # creates a list of testing inputs batches and their answers
+        testing_inputs = np.array(list(testing_samples.keys()))
+        testing_truths = np.array(list(testing_samples.values()))
 
 
-            
+        testing_preds = self.network_forward(testing_inputs, testing_truths)
+        loss_final = self.loss
+        loss_ys.append(loss_final)
 
+        plt.plot(loss_ys)
+        plt.xlabel('Batch')
+        plt.ylabel('Loss')
+        plt.title('Loss After Back')
+        plt.show()    
         
+        if self.regressor:    
+            print(f'MSE: {loss_final}')
+
     
 
 class NetworkErrorOne(Exception):
