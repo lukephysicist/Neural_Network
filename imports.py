@@ -51,7 +51,7 @@ class DenseLayer:
             # change in cost w.r.t. biases in the current layer
             delC_delB = np.mean(self.delC_delA * self.delA_delZ, axis = 0)
 
-            self.biases -= delC_delB
+            self.biases -= delC_delB * rate
 
     def calc_delC_delA(self, truths):
         if self.next_layer == None:
@@ -112,26 +112,26 @@ class Network:
         for layer in reversed(self.layers):
             layer.back(truths, self.rate, self.loss_func)
 
-    def train_test(self, training_samples, testing_samples, batch_size):
+    def train_test(self, training_samples, testing_samples, batch_size, n_epochs):
         
         # batches the training samples
         training_set = [dict(list(training_samples.items())[i: i+batch_size]) for i in range(0, len(training_samples.items()), batch_size)]
 
         # creates a list of traning input batches and their answers
         network_inputs = [np.array(list(batch.keys())) for batch in training_set]
-        network_truths = [np.array(list(batch.values())) for batch in training_set]
-        
+        network_truths = [np.array(list(batch.values())).reshape(-1,1) for batch in training_set]
+
         # trains the network on each batch in the traning set
         loss_ys = []
-        for i in range(len(network_inputs)):
-            self.network_forward(network_inputs=network_inputs[i], truths=network_truths)
-            loss_ys.append(self.loss)
-            self.network_back(network_truths)
+        for j in range(n_epochs):
+            for i in range(len(network_inputs)):
+                self.network_forward(network_inputs=network_inputs[i], truths=network_truths[i])
+                loss_ys.append(self.loss)
+                self.network_back(network_truths[i])
 
         # creates a list of testing inputs batches and their answers
         testing_inputs = np.array(list(testing_samples.keys()))
-        testing_truths = np.array(list(testing_samples.values()))
-
+        testing_truths = np.array(list(testing_samples.values())).reshape(-1,1)
 
         testing_preds = self.network_forward(testing_inputs, testing_truths)
         loss_final = self.loss
@@ -140,11 +140,14 @@ class Network:
         plt.plot(loss_ys)
         plt.xlabel('Batch')
         plt.ylabel('Loss')
-        plt.title('Loss After Back')
+        plt.title('Loss After Backprop')
         plt.show()    
         
         if self.regressor:    
             print(f'MSE: {loss_final}')
+        
+        print(f'test set preds: {testing_preds}')
+        print(f'testing truths: {testing_truths}')
 
     
 
@@ -164,8 +167,8 @@ def relu(inputs):
     return np.maximum(0, inputs)
     
 def sigmoid(inputs):
-        sigmoid = lambda x: 1 / (1 + np.exp(-x))
-        return sigmoid(inputs)
+    inputs = np.clip(inputs, -5, 5)
+    return 1 / (1 + np.exp(-inputs))
 
 def softmax(inputs):
     exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
@@ -187,7 +190,8 @@ def relu_prime(x):
     return np.where(x > 0, 1, 0)
 
 def sigmoid_prime(x):
-    return np.exp(-x)/((1 + np.exp(-x))**2)
+    s = sigmoid(x)
+    return s * (1-s)
 
 
 def cat_cross_entropy(inputs, truths):
@@ -203,7 +207,7 @@ def cat_cross_entropy(inputs, truths):
 
     return np.mean(logged_true_estimates)
 
-def mean_sq_error(inputs, truths): # truths needs to be a two dimensional list of the correct activations for every sample
+def mean_sq_error(inputs, truths):
 
     error_matrix = np.square(inputs - truths)
     sum_vector = np.sum(error_matrix, axis = 1)
