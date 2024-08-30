@@ -119,7 +119,7 @@ class Network:
             training_set = [dict(list(training_samples.items())[i: i+batch_size]) for i in range(0, len(training_samples.items()), batch_size)]
 
             network_inputs = [np.array(list(batch.keys())) for batch in training_set]
-            network_truths = [np.array(list(batch.values())).reshape(-1,1) for batch in training_set]
+            network_truths = [np.array(list(batch.values())).reshape(-1,1) for batch in training_set] # <---- reshape may have to be different for classifier
 
             return (network_inputs, network_truths)
         
