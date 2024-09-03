@@ -149,7 +149,7 @@ class Network:
             plt.xlabel('Batch')
             plt.ylabel('Mean Sq Error')
             plt.title('Loss')
-            plt.show()
+            # plt.show()
             print(f'MSE: {loss_final}\n')
 
             df = pd.DataFrame(
@@ -158,7 +158,7 @@ class Network:
                 "Truths" : [truth[0] for truth in testing_truths]
                 }
             )
-            return df
+            return (df,loss_final)
 
 
     
