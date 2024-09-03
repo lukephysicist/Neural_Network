@@ -149,7 +149,7 @@ class Network:
             plt.xlabel('Batch')
             plt.ylabel('Mean Sq Error')
             plt.title('Loss')
-            # plt.show()
+            plt.show()
             print(f'MSE: {loss_final}\n')
 
             df = pd.DataFrame(
@@ -158,7 +158,7 @@ class Network:
                 "Truths" : [truth[0] for truth in testing_truths]
                 }
             )
-            return (df,loss_final)
+            return (df)
 
 
     
@@ -196,8 +196,6 @@ def act_prime(func, x):
         return relu_prime(x)
     elif func == linear:
         return np.ones(x.shape)
-    elif func == softmax:
-        return softmax_prime(x)
     
 def relu_prime(x):
     return np.where(x > 0, 1, 0)
@@ -205,8 +203,6 @@ def relu_prime(x):
 def sigmoid_prime(x):
     s = sigmoid(x)
     return s * (1-s)
-
-def softmax_prime(x):
     
 
 def cat_cross_entropy(inputs, truths):
