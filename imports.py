@@ -196,8 +196,9 @@ def act_prime(func, x):
         return relu_prime(x)
     elif func == linear:
         return np.ones(x.shape)
+    elif func == softmax:
+        return softmax_prime(x)
     
-
 def relu_prime(x):
     return np.where(x > 0, 1, 0)
 
@@ -205,6 +206,8 @@ def sigmoid_prime(x):
     s = sigmoid(x)
     return s * (1-s)
 
+def softmax_prime(x):
+    
 
 def cat_cross_entropy(inputs, truths):
     batch_size = len(inputs)
